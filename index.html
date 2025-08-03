@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Kos</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    .container img {
+      width: 100px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="logo.png" alt="Logo Smart Kos IoT" />
+    <h1>Selamat Datang di Smart Kos</h1>
+    <p>Silakan pilih peran Anda untuk melanjutkan:</p>
+    <div class="button-group">
+      <a href="login.html?role=admin" class="btn">Login Admin</a>
+      <a href="login.html?role=user" class="btn">Login Penghuni Kos</a>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

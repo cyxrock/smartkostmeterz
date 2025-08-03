@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard Penghuni</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2 class="monitoring-title">Halo, <span id="userName"></span>!</h2>
+        <p>Berikut adalah informasi listrik dan tagihan bulanan Anda.</p>
+        
+        <div id="relayStatusInfo" class="monitoring-footer">Memuat status listrik...</div>
+
+        <h3 style="margin-top:30px;">Monitoring Pemakaian Listrik</h3>
+        <table class="monitoring-table" id="monitoringTable">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Nilai</th>
+                    <th>Satuan</th>
+                </tr>
+            </thead>
+            <tbody id="monitoringBody">
+                </tbody>
+        </table>
+
+        <div class="payment-receipt" style="margin-top: 30px; text-align: center;">
+            <p>Estimasi Tagihan Bulan Ini:</p>
+            <h3 id="billAmount" style="font-size: 2.5em; margin: 10px 0;">Menghitung...</h3>
+            <p id="usageInfo" style="font-size: 0.9em;">Menunggu data dari meteran...</p>
+        </div>
+
+        <div class="button-group vertical">
+            <a href="#" id="paymentBtn" class="btn" style="display:none;">✔️ Konfirmasi Pembayaran</a>
+            <a href="#" id="logoutBtn" class="btn btn-back">🔙 Logout</a>
+        </div>
+    </div>
+
+    <script>
+        // Inisialisasi Firebase
+        if (!firebase.apps.length) {
+            const firebaseConfig = {
+                apiKey: "AIzaSyAlDGfYUsGyPiL41m1qHrQxSRXihI8xuG8",
+                authDomain: "smartkos13.firebaseapp.com",
+                projectId: "smartkos13",
+                storageBucket: "smartkos13.firebasestorage.app",
+                messagingSenderId: "240191503170",
+                appId: "1:240191503170:web:bf169151c9a2ad098d66db",
+                measurementId: "G-H6FY9Q7SLS"
+            };
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+
+        // Autentikasi Pengguna
+        const role = localStorage.getItem('role');
+        const userLogin = localStorage.getItem('username');
+        const qpUser = new URLSearchParams(location.search).get('user');
+
+        if (role !== 'user' || !userLogin || userLogin !== qpUser) {
+            alert('Silakan login terlebih dahulu.');
+            location.href = 'login.html?role=user';
+        } else {
+            document.getElementById('userName').textContent = userLogin;
+        }
+        
+        // Ambil elemen DOM
+        const relayStatusInfo = document.getElementById('relayStatusInfo');
+        const monitoringBody = document.getElementById('monitoringBody');
+        const paymentBtn = document.getElementById('paymentBtn');
+        const billAmountEl = document.getElementById('billAmount');
+        const usageInfoEl = document.getElementById('usageInfo');
+
+        // Fungsi format angka (tetap menggunakan 2 desimal untuk sebagian besar parameter)
+        function fmt(n) { return (typeof n === 'number') ? n.toFixed(2) : 'N/A'; }
+
+        // Dengarkan perubahan pada data kamar spesifik
+        database.ref(userLogin).on('value', snapshot => {
+            const roomData = snapshot.val();
+            // console.log("DEBUG [user.html]: Data mentah dari Firebase:", roomData); // DEBUG
+
+            if (roomData) {
+                // 1. Perbarui Status Listrik
+                const isRelayOn = roomData.relay !== undefined ? roomData.relay : true;
+                relayStatusInfo.innerHTML = `Status Listrik Kamar Anda: <span class="${isRelayOn ? 'paid' : 'unpaid'}">${isRelayOn ? 'NYALA' : 'MATI'}</span>`;
+
+                // 2. Isi Tabel Monitoring Real-time
+                monitoringBody.innerHTML = ''; // Kosongkan tabel sebelum diisi
+                const meteran = roomData.meteran || {};
+                // console.log("DEBUG [user.html]: Objek 'meteran':", meteran); // DEBUG
+
+                // --- BAGIAN PERBAIKAN UTAMA UNTUK ENERGI (KONVERSI DI SINI) ---
+                // Ambil nilai energi dalam Wh dari Firebase
+                // Sertakan fallback ke 'energi' jika 'energi_bulanan' belum ada, untuk kompatibilitas sementara
+                let energyWhFromFirebase = meteran.energi_bulanan; 
+                if (energyWhFromFirebase === undefined && meteran.energi !== undefined) {
+                    energyWhFromFirebase = meteran.energi;
+                    // console.log("DEBUG [user.html]: Menggunakan fallback 'energi' karena 'energi_bulanan' tidak ditemukan."); // DEBUG
+                }
+                // console.log("DEBUG [user.html]: energyWhFromFirebase (mentah):", energyWhFromFirebase); // DEBUG
+
+                // Konversi Wh ke kWh di JavaScript. Pastikan itu angka, jika tidak set 0.
+                const energyKWh = (typeof energyWhFromFirebase === 'number') ? energyWhFromFirebase / 1000.0 : 0; 
+                // console.log("DEBUG [user.html]: energyKWh (setelah konversi):", energyKWh); // DEBUG
+                // --- AKHIR PERBAIKAN ---
+
+                const monitoringRows = [
+                    ['Tegangan', fmt(meteran.tegangan), 'Volt (V)'],
+                    ['Arus', fmt(meteran.arus), 'Ampere (A)'],
+                    ['Daya Aktif', fmt(meteran.daya_aktif), 'Watt (W)'],
+                    ['Frekuensi', fmt(meteran.frekuensi), 'Hertz (Hz)'],
+                    ['Faktor Daya', fmt(meteran.faktor_daya), ''],
+                    // Tampilkan energi yang sudah dikonversi ke kWh dengan 4 desimal
+                    ['Energi Bulanan', energyKWh.toFixed(4), 'kWh'] 
+                ];
+
+                monitoringRows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td>`;
+                    monitoringBody.appendChild(tr);
+                });
+
+                // 3. Hitung dan Tampilkan Tagihan
+                const totalKWhBulan = energyKWh; // Gunakan nilai kWh yang sudah dikonversi
+                const hargaDasarPerKWh = 1444.70;
+                const persentasePPJ = 0.05;
+                let biayaPemakaian = totalKWhBulan * hargaDasarPerKWh;
+
+                const dayaTerpasangVA = roomData.dayaTerpasang || 1300;
+                const dayaTerpasangKW = dayaTerpasangVA / 1000;
+                const kwhMinimum = 40 * dayaTerpasangKW;
+                const biayaMinimum = kwhMinimum * hargaDasarPerKWh;
+                
+                if (biayaPemakaian < biayaMinimum) {
+                    biayaPemakaian = biayaMinimum;
+                }
+
+                const biayaPPJ = biayaPemakaian * persentasePPJ;
+                const totalTagihan = Math.round(biayaPemakaian + biayaPPJ); // Bulatkan total tagihan
+
+                billAmountEl.textContent = `Rp${totalTagihan.toLocaleString('id-ID')}`;
+                // Tampilkan usageInfoEl dengan kWh yang sudah dikonversi dan 4 desimal
+                usageInfoEl.textContent = `Berdasarkan pemakaian ${totalKWhBulan.toFixed(4)} kWh bulan ini.`;
+
+                // 4. Siapkan Tombol Konfirmasi Pembayaran
+                // Hanya tampilkan tombol jika status relay MATI (belum bayar)
+                if (!isRelayOn) {
+                    const userEncoded = encodeURIComponent(userLogin);
+                    const amountEncoded = encodeURIComponent(totalTagihan);
+                    paymentBtn.href = `scan.html?user=${userEncoded}&amount=${amountEncoded}`;
+                    paymentBtn.style.display = 'inline-block';
+                } else {
+                    paymentBtn.style.display = 'none'; // Sembunyikan jika sudah nyala
+                }
+
+
+            } else {
+                // Tampilan jika data tidak ditemukan
+                relayStatusInfo.textContent = 'Status tidak diketahui';
+                monitoringBody.innerHTML = '<tr><td colspan="3">Data monitoring tidak ditemukan.</td></tr>';
+                billAmountEl.textContent = 'Data tidak ditemukan';
+                // console.log("DEBUG [user.html]: roomData tidak ditemukan."); // DEBUG
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').onclick = e => {
+            e.preventDefault();
+            localStorage.removeItem('role');
+            localStorage.removeItem('username');
+            location.href = 'index.html';
+        };
+    </script>
+</body>
+</html>

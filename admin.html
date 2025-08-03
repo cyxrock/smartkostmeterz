@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard Admin</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Selamat Datang Admin!</h2>
+        <p>Ini adalah halaman dashboard untuk mengelola listrik dan pembayaran kos.</p>
+
+        <h3>Daftar Penghuni Kos dan Kontrol</h3>
+        <table class="admin-table" id="usersTable">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Status Listrik</th>
+                    <th>Aksi</th>
+                    <th>Kontrol Relay</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+
+        <div class="button-group" style="margin-top:40px;">
+            <a href="#" id="logoutBtn" class="btn btn-back">🔙 Logout</a>
+        </div>
+    </div>
+
+    <script>
+        // Inisialisasi Firebase
+        if (!firebase.apps.length) {
+            const firebaseConfig = {
+                apiKey: "AIzaSyAlDGfYUsGyPiL41m1qHrQxSRXihI8xuG8",
+                authDomain: "smartkos13.firebaseapp.com",
+                projectId: "smartkos13",
+                storageBucket: "smartkos13.firebasestorage.app",
+                messagingSenderId: "240191503170",
+                appId: "1:240191503170:web:bf169151c9a2ad098d66db",
+                measurementId: "G-H6FY9Q7SLS"
+            };
+            firebase.initializeApp(firebaseConfig);
+        }
+        const database = firebase.database();
+
+        // Autentikasi Admin
+        const role = localStorage.getItem('role');
+        if (role !== 'admin') {
+            alert('Akses ditolak. Silakan login sebagai admin.');
+            window.location.href = 'login.html?role=admin';
+        }
+
+        const usersTableBody = document.querySelector('#usersTable tbody');
+
+        function renderUsersTable(allData) {
+            usersTableBody.innerHTML = '';
+            // Filter hanya user (bukan admin, dll.)
+            const userKeys = Object.keys(allData).filter(key => key.startsWith('kamar')); // Asumsi user dimulai dengan 'kamar'
+
+            userKeys.forEach(user => {
+                const userData = allData[user];
+                const isRelayOn = userData.relay === true; // Ambil status relay
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user}</td>
+                    <td>
+                        <span class="relay-status ${isRelayOn ? 'paid' : 'unpaid'}">
+                            ${isRelayOn ? 'NYALA' : 'MATI'}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="detail.html?user=${encodeURIComponent(user)}" class="btn btn-view">Lihat Detail</a>
+                    </td>
+                    <td>
+                        <button class="btn btn-control ${isRelayOn ? 'btn-off' : ''}" 
+                                data-user="${user}" 
+                                data-action="off" 
+                                ${isRelayOn ? '' : 'disabled'}>
+                            Matikan
+                        </button>
+                        <button class="btn btn-control ${!isRelayOn ? 'btn-on' : ''}" 
+                                data-user="${user}" 
+                                data-action="on" 
+                                ${isRelayOn ? 'disabled' : ''}>
+                            Nyalakan
+                        </button>
+                    </td>
+                `;
+                usersTableBody.appendChild(tr);
+            });
+        }
+
+        // Dengarkan perubahan data di Firebase secara keseluruhan
+        database.ref('/').on('value', snapshot => {
+            const allData = snapshot.val();
+            if (allData) {
+                renderUsersTable(allData);
+            }
+        });
+
+        // Event listener untuk tombol kontrol relay
+        usersTableBody.addEventListener('click', e => {
+            const target = e.target;
+            if (target.classList.contains('btn-control')) {
+                const user = target.getAttribute('data-user');
+                const action = target.getAttribute('data-action');
+                const newRelayStatus = (action === 'on'); // true jika 'on', false jika 'off'
+
+                database.ref(`${user}/relay`).set(newRelayStatus)
+                    .then(() => {
+                        console.log(`Status relay untuk ${user} diperbarui ke ${newRelayStatus ? 'ON' : 'OFF'}.`);
+                    })
+                    .catch(error => console.error("Error memperbarui status relay:", error));
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').onclick = e => {
+            e.preventDefault();
+            localStorage.removeItem('role');
+            localStorage.removeItem('username');
+            window.location.href = 'index.html';
+        };
+    </script>
+</body>
+</html>
