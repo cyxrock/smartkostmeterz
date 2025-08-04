@@ -14,18 +14,20 @@
         <p>Ini adalah halaman dashboard untuk mengelola listrik dan pembayaran kos.</p>
 
         <h3>Daftar Penghuni Kos dan Kontrol</h3>
-        <table class="admin-table" id="usersTable">
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Status Listrik</th>
-                    <th>Aksi</th>
-                    <th>Kontrol Relay</th>
-                </tr>
-            </thead>
-            <tbody>
-                </tbody>
-        </table>
+        <div class="admin-table-container">
+            <table class="admin-table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Status Listrik</th>
+                        <th>Aksi</th>
+                        <th>Kontrol Relay</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
 
         <div class="button-group" style="margin-top:40px;">
             <a href="#" id="logoutBtn" class="btn btn-back">🔙 Logout</a>
@@ -60,11 +62,11 @@
         function renderUsersTable(allData) {
             usersTableBody.innerHTML = '';
             // Filter hanya user (bukan admin, dll.)
-            const userKeys = Object.keys(allData).filter(key => key.startsWith('kamar')); // Asumsi user dimulai dengan 'kamar'
+            const userKeys = Object.keys(allData).filter(key => key.startsWith('kamar'));
 
             userKeys.forEach(user => {
                 const userData = allData[user];
-                const isRelayOn = userData.relay === true; // Ambil status relay
+                const isRelayOn = userData.relay === true;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${user}</td>
@@ -77,15 +79,15 @@
                         <a href="detail.html?user=${encodeURIComponent(user)}" class="btn btn-view">Lihat Detail</a>
                     </td>
                     <td>
-                        <button class="btn btn-control ${isRelayOn ? 'btn-off' : ''}" 
-                                data-user="${user}" 
-                                data-action="off" 
+                        <button class="btn btn-control ${isRelayOn ? 'btn-off' : ''}"
+                                data-user="${user}"
+                                data-action="off"
                                 ${isRelayOn ? '' : 'disabled'}>
                             Matikan
                         </button>
-                        <button class="btn btn-control ${!isRelayOn ? 'btn-on' : ''}" 
-                                data-user="${user}" 
-                                data-action="on" 
+                        <button class="btn btn-control ${!isRelayOn ? 'btn-on' : ''}"
+                                data-user="${user}"
+                                data-action="on"
                                 ${isRelayOn ? 'disabled' : ''}>
                             Nyalakan
                         </button>
@@ -109,7 +111,7 @@
             if (target.classList.contains('btn-control')) {
                 const user = target.getAttribute('data-user');
                 const action = target.getAttribute('data-action');
-                const newRelayStatus = (action === 'on'); // true jika 'on', false jika 'off'
+                const newRelayStatus = (action === 'on');
 
                 database.ref(`${user}/relay`).set(newRelayStatus)
                     .then(() => {
