@@ -61,7 +61,6 @@
 
         function renderUsersTable(allData) {
             usersTableBody.innerHTML = '';
-            // Filter hanya user (bukan admin, dll.)
             const userKeys = Object.keys(allData).filter(key => key.startsWith('kamar'));
 
             userKeys.forEach(user => {
@@ -108,16 +107,20 @@
         // Event listener untuk tombol kontrol relay
         usersTableBody.addEventListener('click', e => {
             const target = e.target;
+            // Pastikan elemen yang diklik adalah tombol kontrol
             if (target.classList.contains('btn-control')) {
                 const user = target.getAttribute('data-user');
                 const action = target.getAttribute('data-action');
                 const newRelayStatus = (action === 'on');
 
-                database.ref(`${user}/relay`).set(newRelayStatus)
+                // DEBUG: Tambahkan log untuk melihat nilai
+                console.log(DEBUG: Tombol diklik! User: ${user}, Aksi: ${action}, Status baru: ${newRelayStatus});
+
+                database.ref(${user}/relay).set(newRelayStatus)
                     .then(() => {
-                        console.log(`Status relay untuk ${user} diperbarui ke ${newRelayStatus ? 'ON' : 'OFF'}.`);
+                        console.log(SUCCESS: Status relay untuk ${user} diperbarui ke ${newRelayStatus ? 'ON' : 'OFF'}.);
                     })
-                    .catch(error => console.error("Error memperbarui status relay:", error));
+                    .catch(error => console.error("ERROR: Gagal memperbarui status relay:", error));
             }
         });
 
