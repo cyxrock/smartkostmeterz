@@ -32,6 +32,7 @@ body {
     font-family: 'Poppins', sans-serif;
     background-color: var(--body-color);
     color: var(--text-color);
+    line-height: 1.6;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -40,124 +41,27 @@ body {
 }
 
 .container {
-    background: var(--card-color);
-    padding: 30px 40px;
+    background: var(--dark-color);
+    padding: 30px;
     border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    max-width: 900px;
     width: 100%;
-    max-width: 800px;
     text-align: center;
-    border: 1px solid var(--border-color);
-}
-
-.container img {
-    width: 100px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-    transition: transform 0.3s ease;
-}
-
-.container img:hover {
-    transform: scale(1.05);
+    margin: auto;
 }
 
 h1, h2, h3 {
-    color: #ffffff;
-    margin-bottom: 20px;
+    color: var(--primary-color);
+    margin-bottom: 15px;
     font-weight: 600;
 }
 
-h1 { font-size: 2.2em; }
-h2 { font-size: 1.8em; }
-h3 {
-    font-size: 1.4em;
-    text-align: left;
-    margin-top: 30px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-}
-
 p {
-    margin-bottom: 25px;
-    line-height: 1.7;
     color: var(--text-muted-color);
-    text-align: center;
+    margin-bottom: 20px;
 }
 
-/* ==================
-   BUTTONS
-   ================== */
-.button-group {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    flex-wrap: wrap;
-    margin-top: 30px;
-}
-
-.button-group.vertical {
-    flex-direction: column;
-    align-items: center;
-}
-
-.btn {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 12px 25px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    font-size: 1em;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    display: inline-block;
-    min-width: 160px;
-    text-align: center;
-}
-
-.btn:hover {
-    background-color: var(--primary-hover-color);
-    transform: translateY(-3px);
-    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
-}
-
-.btn:disabled {
-    background-color: #555;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.btn-back {
-    background-color: #6c757d;
-}
-.btn-back:hover {
-    background-color: #5a6268;
-    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
-}
-
-.btn-control.btn-off {
-    background-color: var(--danger-color);
-}
-.btn-control.btn-off:hover {
-    background-color: var(--danger-hover-color);
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
-}
-.btn-control.btn-on {
-    background-color: var(--success-color);
-}
-.btn-control.btn-on:hover {
-    background-color: var(--success-hover-color);
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-}
-
-
-/* ==================
-   FORMS
-   ================== */
 .form-group {
     margin-bottom: 20px;
     text-align: left;
@@ -166,112 +70,207 @@ p {
 .form-group label {
     display: block;
     margin-bottom: 8px;
-    font-weight: 500;
-    color: var(--text-muted-color);
+    color: var(--text-color);
 }
 
-.form-group input[type="text"],
-.form-group input[type="password"] {
+.form-group input {
     width: 100%;
-    padding: 12px 15px;
+    padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background-color: var(--body-color);
+    background-color: var(--card-color);
     color: var(--text-color);
     font-size: 1em;
-    transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-.form-group input:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 8px rgba(0, 123, 255, 0.4);
+.btn {
+    display: inline-block;
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    border: none;
+    font-size: 1em;
+    width: 100%; /* Default ke lebar penuh */
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-group {
+    display: flex;
+    flex-wrap: wrap; /* Memungkinkan tombol untuk pindah baris */
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.btn-group a, .btn-group button {
+    flex: 1 1 150px; /* Fleksibel, tapi minimal 150px */
+}
+
+.btn-back {
+    background-color: var(--card-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.btn-back:hover {
+    background-color: var(--border-color);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover-color);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+.btn-danger:hover {
+    background-color: var(--danger-hover-color);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: #fff;
+}
+.btn-success:hover {
+    background-color: var(--success-hover-color);
+}
+
+.btn-view {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+.btn-view:hover {
+    background-color: var(--primary-hover-color);
+}
+
+.btn-control {
+    width: 100px;
+    margin: 5px;
+    font-size: 0.9em;
+}
+
+.btn-on {
+    background-color: var(--success-color);
+    color: #fff;
+}
+.btn-on:hover {
+    background-color: var(--success-hover-color);
+}
+.btn-on:disabled {
+    background-color: #4a6c50;
+    cursor: not-allowed;
+}
+
+.btn-off {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+.btn-off:hover {
+    background-color: var(--danger-hover-color);
+}
+.btn-off:disabled {
+    background-color: #6c4a4a;
+    cursor: not-allowed;
 }
 
 .error-message {
     color: var(--danger-color);
-    margin-top: 10px;
-    margin-bottom: 15px;
-    font-weight: 500;
-    min-height: 20px;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.notification-message {
+    padding: 15px;
+    border-radius: 8px;
+    color: #fff;
+    margin-bottom: 20px;
+    text-align: center;
 }
 
 /* ==================
-   TABLE STYLES
+   TABLES
    ================== */
+.admin-table-container, .monitoring-table-container {
+    width: 100%;
+    overflow-x: auto; /* Memungkinkan tabel digeser horizontal */
+}
+
 .admin-table, .monitoring-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-    background: transparent;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.admin-table th, .monitoring-table th {
-    background-color: rgba(0, 0, 0, 0.4);
-    color: white;
-    padding: 15px;
+    font-size: 0.9em;
     text-align: left;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.85em;
-    letter-spacing: 0.5px;
+    white-space: nowrap; /* Mencegah teks di tabel pecah baris */
 }
 
+.admin-table thead, .monitoring-table thead {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.admin-table th, .monitoring-table th,
 .admin-table td, .monitoring-table td {
-    padding: 15px;
+    padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
-    color: var(--text-color);
-    vertical-align: middle;
 }
 
-.admin-table tbody tr, .monitoring-table tbody tr {
-    transition: background-color 0.3s;
-}
-
-.admin-table tbody tr:last-child td,
-.monitoring-table tbody tr:last-child td {
-    border-bottom: none;
+.admin-table tbody tr {
+    background-color: var(--card-color);
+    transition: background-color 0.3s ease;
 }
 
 .admin-table tbody tr:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* Status Labels */
 .relay-status {
+    padding: 5px 10px;
+    border-radius: 5px;
     font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 20px;
     font-size: 0.9em;
-    display: inline-block;
-    color: white;
 }
 
-.relay-status.paid {
+.paid {
     background-color: var(--success-color);
+    color: #fff;
 }
-
-.relay-status.unpaid {
+.unpaid {
     background-color: var(--danger-color);
+    color: #fff;
 }
 
 /* ==================
-   USER & DETAIL PAGE
+   DASHBOARD & DETAILS
    ================== */
-.monitoring-footer, .notification-message {
-    margin-top: 20px;
-    font-size: 1.1em;
-    font-weight: 500;
-    background: rgba(0,0,0,0.2);
+.monitoring-footer {
     padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    background: var(--card-color);
+    border-radius: 10px;
+    margin-top: 20px;
+    text-align: center;
+    border: 1px solid var(--border-color);
 }
 
-.payment-receipt, .payment-details {
-    background: rgba(0,0,0,0.2);
+.monitoring-title {
+    font-size: 2em;
+    margin-bottom: 5px;
+}
+
+.payment-receipt {
+    background: var(--card-color);
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 15px;
@@ -314,6 +313,10 @@ p {
    RESPONSIVE DESIGN
    ================== */
 @media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
     .container {
         padding: 20px;
     }
@@ -321,38 +324,54 @@ p {
     h1 { font-size: 1.8em; }
     h2 { font-size: 1.5em; }
     h3 { font-size: 1.2em; }
-
-    .table-wrapper {
-        overflow-x: auto;
+    
+    .btn {
+        font-size: 0.9em;
+        padding: 12px 20px;
     }
-    .admin-table, .monitoring-table {
-        min-width: 600px;
+    
+    .btn-group {
+        flex-direction: column; /* Tombol menjadi satu kolom */
+    }
+
+    .btn-group a, .btn-group button {
+        flex: 1 1 100%;
+    }
+    
+    .admin-table th, .monitoring-table th,
+    .admin-table td, .monitoring-table td {
+        padding: 10px;
+    }
+
+    .admin-table td:nth-child(4) {
+        text-align: right;
+    }
+
+    .btn-control {
+        width: 80px;
+        font-size: 0.8em;
+        margin: 2px;
+    }
+
+    #billAmount {
+        font-size: 2.2em;
     }
 }
 
 @media (max-width: 480px) {
-    body {
-        padding: 10px;
-    }
-
     .container {
-        padding: 20px 15px;
-    }
-
-    .btn {
-        width: 100%;
         padding: 15px;
     }
-    .button-group {
-        flex-direction: column;
+    
+    h1 { font-size: 1.5em; }
+    h2 { font-size: 1.3em; }
+    
+    .admin-table, .monitoring-table {
+        font-size: 0.8em;
     }
 
-    .admin-table td, .admin-table th,
-    .monitoring-table td, .monitoring-table th {
-        padding: 10px;
-    }
-
-    #paymentHistory {
-        grid-template-columns: 1fr;
+    .btn-control {
+        width: 70px;
+        font-size: 0.7em;
     }
 }
