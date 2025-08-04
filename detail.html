@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css" />
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -14,17 +15,31 @@
         <p>Data penggunaan listrik dan riwayat pembayaran untuk penghuni yang dipilih.</p>
 
         <h3 style="margin-top:30px;">Monitoring Real-time</h3>
-        <table class="monitoring-table" id="detailMonitoringTable">
-            <thead>
-                <tr>
-                    <th>Parameter</th>
-                    <th>Nilai</th>
-                    <th>Satuan</th>
-                </tr>
-            </thead>
-            <tbody>
-                </tbody>
-        </table>
+        <div class="monitoring-table-container">
+            <table class="monitoring-table" id="detailMonitoringTable">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Nilai</th>
+                        <th>Satuan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+
+        <h3 style="margin-top: 30px;">Grafik Pemakaian Daya Aktif (Watt)</h3>
+        <canvas id="powerChart"></canvas>
+        
+        <h3 style="margin-top: 30px;">Grafik Tegangan (Volt)</h3>
+        <canvas id="voltageChart"></canvas>
+
+        <h3 style="margin-top: 30px;">Grafik Arus (Ampere)</h3>
+        <canvas id="currentChart"></canvas>
+
+        <h3 style="margin-top: 30px;">Grafik Energi Bulanan (kWh)</h3>
+        <canvas id="energyChart"></canvas>
 
         <h3 style="margin-top:30px;">Riwayat Pembayaran (Struk)</h3>
         <div id="paymentHistory">
@@ -53,41 +68,85 @@
 
         // Ambil nama pengguna dari URL (misal: user=kamar1)
         const urlParams = new URLSearchParams(window.location.search);
-        const detailUser = urlParams.get('user'); 
+        const detailUser = urlParams.get('user');
         document.getElementById('detailUser').textContent = detailUser;
 
         const detailMonitoringBody = document.querySelector('#detailMonitoringTable tbody');
         const paymentHistoryDiv = document.getElementById('paymentHistory');
 
+        // Konteks grafik
+        const powerChartCtx = document.getElementById('powerChart').getContext('2d');
+        const voltageChartCtx = document.getElementById('voltageChart').getContext('2d');
+        const currentChartCtx = document.getElementById('currentChart').getContext('2d');
+        const energyChartCtx = document.getElementById('energyChart').getContext('2d');
+        
+        let powerChart;
+        let voltageChart;
+        let currentChart;
+        let energyChart;
+        
+        let chartDataPoints = {
+            power: [],
+            voltage: [],
+            current: [],
+            energy: []
+        };
+
         // Fungsi format angka (tetap menggunakan 2 desimal untuk sebagian besar parameter)
-        function fmt(n) { 
-            // console.log(`DEBUG [detail.html]: fmt() menerima nilai: ${n}, tipe: ${typeof n}`); 
-            return (typeof n === 'number') ? n.toFixed(2) : 'N/A'; 
+        function fmt(n) {
+            return (typeof n === 'number') ? n.toFixed(2) : 'N/A';
+        }
+        
+        // Fungsi untuk memperbarui grafik
+        function updateChart(chart, ctx, label, data, borderColor, unit) {
+            const labels = chartDataPoints[data].map(p => p.x);
+            const dataValues = chartDataPoints[data].map(p => p.y);
+
+            if (chart) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = dataValues;
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `${label} (${unit})`,
+                            data: dataValues,
+                            borderColor: borderColor,
+                            tension: 0.1,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: `${label} (${unit})`
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            return chart;
         }
 
         // Dengarkan perubahan data untuk pengguna spesifik di Firebase
         if (detailUser) {
             database.ref(detailUser).on('value', snapshot => {
                 const userData = snapshot.val();
-                // console.log("DEBUG [detail.html]: Data mentah dari Firebase untuk detail user:", userData); // Debug seluruh data
 
                 if (userData) {
-                    const meteran = userData.meteran || {}; // Pastikan meteran adalah objek atau kosong
-                    // console.log("DEBUG [detail.html]: Objek 'meteran' yang diterima:", meteran); // Debug objek meteran
-
-                    // --- BAGIAN PENTING: Mendapatkan & Mengkonversi Energi ---
-                    // Coba ambil energi dari 'energi_bulanan'. Sertakan fallback ke 'energi' jika belum ada
-                    let energyWhFromFirebase = meteran.energi_bulanan; 
+                    const meteran = userData.meteran || {};
+                    let energyWhFromFirebase = meteran.energi_bulanan;
                     if (energyWhFromFirebase === undefined && meteran.energi !== undefined) {
                         energyWhFromFirebase = meteran.energi;
-                        // console.log("DEBUG [detail.html]: Menggunakan fallback 'energi' karena 'energi_bulanan' tidak ditemukan."); // DEBUG
                     }
-                    // console.log("DEBUG [detail.html]: energyWhFromFirebase (nilai mentah dari Firebase):", energyWhFromFirebase);
-
-                    // Konversi Wh ke kWh hanya jika nilai yang didapat adalah angka, jika tidak set 0
                     const energyKWh = (typeof energyWhFromFirebase === 'number') ? energyWhFromFirebase / 1000.0 : 0;
-                    // console.log("DEBUG [detail.html]: energyKWh (setelah konversi):", energyKWh);
-                    // --- AKHIR BAGIAN ENERGI ---
 
                     detailMonitoringBody.innerHTML = '';
                     const monitoringRows = [
@@ -96,9 +155,7 @@
                         ['Daya Aktif', fmt(meteran.daya_aktif), 'Watt (W)'],
                         ['Frekuensi', fmt(meteran.frekuensi), 'Hertz (Hz)'],
                         ['Faktor Daya', fmt(meteran.faktor_daya), ''],
-                        // Tampilkan energi yang sudah dikonversi ke kWh dengan 4 desimal
-                        // Pastikan menggunakan toFixed(4) dan jika bukan angka tetap 'N/A'
-                        ['Energi Bulanan', (typeof energyKWh === 'number') ? energyKWh.toFixed(4) : 'N/A', 'kWh'] 
+                        ['Energi Bulanan', (typeof energyKWh === 'number') ? energyKWh.toFixed(4) : 'N/A', 'kWh']
                     ];
 
                     monitoringRows.forEach(r => {
@@ -107,21 +164,35 @@
                         detailMonitoringBody.appendChild(tr);
                     });
 
-                    // --- BAGIAN RIWAYAT PEMBAYARAN ---
-                    // console.log("DEBUG [detail.html]: Objek 'payments' yang diterima:", userData.payments); // Debug payments object
+                    // Perbarui Data untuk Semua Grafik
+                    const now = new Date();
+                    const timeLabel = now.toLocaleTimeString();
+
+                    chartDataPoints.power.push({ x: timeLabel, y: meteran.daya_aktif || 0 });
+                    chartDataPoints.voltage.push({ x: timeLabel, y: meteran.tegangan || 0 });
+                    chartDataPoints.current.push({ x: timeLabel, y: meteran.arus || 0 });
+                    chartDataPoints.energy.push({ x: timeLabel, y: energyKWh });
+                    
+                    const maxDataPoints = 10;
+                    if (chartDataPoints.power.length > maxDataPoints) chartDataPoints.power.shift();
+                    if (chartDataPoints.voltage.length > maxDataPoints) chartDataPoints.voltage.shift();
+                    if (chartDataPoints.current.length > maxDataPoints) chartDataPoints.current.shift();
+                    if (chartDataPoints.energy.length > maxDataPoints) chartDataPoints.energy.shift();
+
+                    // Perbarui atau buat grafik
+                    powerChart = updateChart(powerChart, powerChartCtx, 'Daya Aktif', 'power', 'rgb(75, 192, 192)', 'Watt');
+                    voltageChart = updateChart(voltageChart, voltageChartCtx, 'Tegangan', 'voltage', 'rgb(54, 162, 235)', 'Volt');
+                    currentChart = updateChart(currentChart, currentChartCtx, 'Arus', 'current', 'rgb(255, 159, 64)', 'Ampere');
+                    energyChart = updateChart(energyChart, energyChartCtx, 'Energi Bulanan', 'energy', 'rgb(153, 102, 255)', 'kWh');
 
                     if (userData.payments) {
                         updatePaymentHistory(userData.payments);
                     } else {
                         paymentHistoryDiv.innerHTML = '<p>Riwayat pembayaran tidak ditemukan.</p>';
-                        // console.log("DEBUG [detail.html]: userData.payments tidak ditemukan atau kosong."); // DEBUG
                     }
-                    // --- AKHIR RIWAYAT PEMBAYARAN ---
-
                 } else {
                     detailMonitoringBody.innerHTML = '<tr><td colspan="3">Data monitoring tidak tersedia untuk pengguna ini.</td></tr>';
                     paymentHistoryDiv.innerHTML = '<p>Data pengguna tidak ditemukan.</p>';
-                    // console.log("DEBUG [detail.html]: userData tidak ditemukan untuk:", detailUser); // DEBUG
                 }
             });
         } else {
@@ -129,26 +200,20 @@
             paymentHistoryDiv.innerHTML = '<p>Pengguna tidak ditentukan.</p>';
         }
 
-        // Fungsi untuk memperbarui riwayat pembayaran (sudah diperbaiki sedikit)
+        // Fungsi untuk memperbarui riwayat pembayaran
         function updatePaymentHistory(userPayments) {
             paymentHistoryDiv.innerHTML = '';
-            // Pastikan userPayments adalah objek sebelum memprosesnya
             if (typeof userPayments !== 'object' || userPayments === null) {
-                // console.log("DEBUG [detail.html]: userPayments bukan objek atau null, tidak bisa memproses riwayat.");
                 paymentHistoryDiv.innerHTML = '<p>Riwayat pembayaran tidak valid.</p>';
                 return;
             }
 
             const paymentArray = Object.keys(userPayments).map(key => ({ ...userPayments[key], id: key }));
-            // console.log("DEBUG [detail.html]: paymentArray (setelah konversi dari objek):", paymentArray); // DEBUG
-
             if (paymentArray.length > 0) {
-                // Urutkan pembayaran berdasarkan timestamp (terbaru akan di atas)
                 const sortedPaymentHistory = [...paymentArray].sort((a, b) => {
-                    // Jika ada timestamp dari Firebase, gunakan itu. Jika tidak, gunakan tanggal/jam
                     const timeA = a.timestamp || new Date(`${a.bulan} ${a.tanggal}, ${a.tahun} ${a.jam || '00:00:00'}`).getTime();
                     const timeB = b.timestamp || new Date(`${b.bulan} ${b.tanggal}, ${b.tahun} ${b.jam || '00:00:00'}`).getTime();
-                    return timeB - timeA; // Urutkan dari terbaru ke terlama
+                    return timeB - timeA;
                 });
 
                 sortedPaymentHistory.forEach(p => {
@@ -163,7 +228,6 @@
                 });
             } else {
                 paymentHistoryDiv.innerHTML = '<p>Riwayat pembayaran tidak ditemukan.</p>';
-                // console.log("DEBUG [detail.html]: paymentArray kosong."); // DEBUG
             }
         }
 
