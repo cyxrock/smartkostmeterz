@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css" />
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -16,17 +17,30 @@
         <div id="relayStatusInfo" class="monitoring-footer">Memuat status listrik...</div>
 
         <h3 style="margin-top:30px;">Monitoring Pemakaian Listrik</h3>
-        <table class="monitoring-table" id="monitoringTable">
-            <thead>
-                <tr>
-                    <th>Parameter</th>
-                    <th>Nilai</th>
-                    <th>Satuan</th>
-                </tr>
-            </thead>
-            <tbody id="monitoringBody">
-                </tbody>
-        </table>
+        <div class="monitoring-table-container">
+            <table class="monitoring-table" id="monitoringTable">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Nilai</th>
+                        <th>Satuan</th>
+                    </tr>
+                </thead>
+                <tbody id="monitoringBody">
+                    </tbody>
+            </table>
+        </div>
+        <h3 style="margin-top: 30px;">Grafik Pemakaian Daya Aktif (Watt)</h3>
+        <canvas id="powerChart"></canvas>
+
+        <h3 style="margin-top: 30px;">Grafik Tegangan (Volt)</h3>
+        <canvas id="voltageChart"></canvas>
+
+        <h3 style="margin-top: 30px;">Grafik Arus (Ampere)</h3>
+        <canvas id="currentChart"></canvas>
+
+        <h3 style="margin-top: 30px;">Grafik Energi Bulanan (kWh)</h3>
+        <canvas id="energyChart"></canvas>
 
         <div class="payment-receipt" style="margin-top: 30px; text-align: center;">
             <p>Estimasi Tagihan Bulan Ini:</p>
@@ -74,47 +88,91 @@
         const paymentBtn = document.getElementById('paymentBtn');
         const billAmountEl = document.getElementById('billAmount');
         const usageInfoEl = document.getElementById('usageInfo');
+        
+        // Konteks grafik
+        const powerChartCtx = document.getElementById('powerChart').getContext('2d');
+        const voltageChartCtx = document.getElementById('voltageChart').getContext('2d');
+        const currentChartCtx = document.getElementById('currentChart').getContext('2d');
+        const energyChartCtx = document.getElementById('energyChart').getContext('2d');
+        
+        let powerChart;
+        let voltageChart;
+        let currentChart;
+        let energyChart;
+        
+        let chartDataPoints = {
+            power: [],
+            voltage: [],
+            current: [],
+            energy: []
+        };
 
         // Fungsi format angka (tetap menggunakan 2 desimal untuk sebagian besar parameter)
         function fmt(n) { return (typeof n === 'number') ? n.toFixed(2) : 'N/A'; }
 
+        // Fungsi untuk memperbarui grafik
+        function updateChart(chart, ctx, label, data, borderColor, unit) {
+            const labels = chartDataPoints[data].map(p => p.x);
+            const dataValues = chartDataPoints[data].map(p => p.y);
+
+            if (chart) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = dataValues;
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `${label} (${unit})`,
+                            data: dataValues,
+                            borderColor: borderColor,
+                            tension: 0.1,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: `${label} (${unit})`
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            return chart;
+        }
+
         // Dengarkan perubahan pada data kamar spesifik
         database.ref(userLogin).on('value', snapshot => {
             const roomData = snapshot.val();
-            // console.log("DEBUG [user.html]: Data mentah dari Firebase:", roomData); // DEBUG
-
+            
             if (roomData) {
                 // 1. Perbarui Status Listrik
                 const isRelayOn = roomData.relay !== undefined ? roomData.relay : true;
                 relayStatusInfo.innerHTML = `Status Listrik Kamar Anda: <span class="${isRelayOn ? 'paid' : 'unpaid'}">${isRelayOn ? 'NYALA' : 'MATI'}</span>`;
 
                 // 2. Isi Tabel Monitoring Real-time
-                monitoringBody.innerHTML = ''; // Kosongkan tabel sebelum diisi
+                monitoringBody.innerHTML = '';
                 const meteran = roomData.meteran || {};
-                // console.log("DEBUG [user.html]: Objek 'meteran':", meteran); // DEBUG
-
-                // --- BAGIAN PERBAIKAN UTAMA UNTUK ENERGI (KONVERSI DI SINI) ---
-                // Ambil nilai energi dalam Wh dari Firebase
-                // Sertakan fallback ke 'energi' jika 'energi_bulanan' belum ada, untuk kompatibilitas sementara
+                
                 let energyWhFromFirebase = meteran.energi_bulanan; 
                 if (energyWhFromFirebase === undefined && meteran.energi !== undefined) {
                     energyWhFromFirebase = meteran.energi;
-                    // console.log("DEBUG [user.html]: Menggunakan fallback 'energi' karena 'energi_bulanan' tidak ditemukan."); // DEBUG
                 }
-                // console.log("DEBUG [user.html]: energyWhFromFirebase (mentah):", energyWhFromFirebase); // DEBUG
-
-                // Konversi Wh ke kWh di JavaScript. Pastikan itu angka, jika tidak set 0.
                 const energyKWh = (typeof energyWhFromFirebase === 'number') ? energyWhFromFirebase / 1000.0 : 0; 
-                // console.log("DEBUG [user.html]: energyKWh (setelah konversi):", energyKWh); // DEBUG
-                // --- AKHIR PERBAIKAN ---
-
+                
                 const monitoringRows = [
                     ['Tegangan', fmt(meteran.tegangan), 'Volt (V)'],
                     ['Arus', fmt(meteran.arus), 'Ampere (A)'],
                     ['Daya Aktif', fmt(meteran.daya_aktif), 'Watt (W)'],
                     ['Frekuensi', fmt(meteran.frekuensi), 'Hertz (Hz)'],
                     ['Faktor Daya', fmt(meteran.faktor_daya), ''],
-                    // Tampilkan energi yang sudah dikonversi ke kWh dengan 4 desimal
                     ['Energi Bulanan', energyKWh.toFixed(4), 'kWh'] 
                 ];
 
@@ -124,8 +182,29 @@
                     monitoringBody.appendChild(tr);
                 });
 
-                // 3. Hitung dan Tampilkan Tagihan
-                const totalKWhBulan = energyKWh; // Gunakan nilai kWh yang sudah dikonversi
+                // 3. Perbarui Data untuk Semua Grafik
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString();
+
+                chartDataPoints.power.push({ x: timeLabel, y: meteran.daya_aktif || 0 });
+                chartDataPoints.voltage.push({ x: timeLabel, y: meteran.tegangan || 0 });
+                chartDataPoints.current.push({ x: timeLabel, y: meteran.arus || 0 });
+                chartDataPoints.energy.push({ x: timeLabel, y: energyKWh });
+                
+                const maxDataPoints = 10;
+                if (chartDataPoints.power.length > maxDataPoints) chartDataPoints.power.shift();
+                if (chartDataPoints.voltage.length > maxDataPoints) chartDataPoints.voltage.shift();
+                if (chartDataPoints.current.length > maxDataPoints) chartDataPoints.current.shift();
+                if (chartDataPoints.energy.length > maxDataPoints) chartDataPoints.energy.shift();
+
+                // Perbarui atau buat grafik
+                powerChart = updateChart(powerChart, powerChartCtx, 'Daya Aktif', 'power', 'rgb(75, 192, 192)', 'Watt');
+                voltageChart = updateChart(voltageChart, voltageChartCtx, 'Tegangan', 'voltage', 'rgb(54, 162, 235)', 'Volt');
+                currentChart = updateChart(currentChart, currentChartCtx, 'Arus', 'current', 'rgb(255, 159, 64)', 'Ampere');
+                energyChart = updateChart(energyChart, energyChartCtx, 'Energi Bulanan', 'energy', 'rgb(153, 102, 255)', 'kWh');
+
+                // 4. Hitung dan Tampilkan Tagihan
+                const totalKWhBulan = energyKWh;
                 const hargaDasarPerKWh = 1444.70;
                 const persentasePPJ = 0.05;
                 let biayaPemakaian = totalKWhBulan * hargaDasarPerKWh;
@@ -140,30 +219,25 @@
                 }
 
                 const biayaPPJ = biayaPemakaian * persentasePPJ;
-                const totalTagihan = Math.round(biayaPemakaian + biayaPPJ); // Bulatkan total tagihan
+                const totalTagihan = Math.round(biayaPemakaian + biayaPPJ);
 
                 billAmountEl.textContent = `Rp${totalTagihan.toLocaleString('id-ID')}`;
-                // Tampilkan usageInfoEl dengan kWh yang sudah dikonversi dan 4 desimal
                 usageInfoEl.textContent = `Berdasarkan pemakaian ${totalKWhBulan.toFixed(4)} kWh bulan ini.`;
 
-                // 4. Siapkan Tombol Konfirmasi Pembayaran
-                // Hanya tampilkan tombol jika status relay MATI (belum bayar)
+                // 5. Siapkan Tombol Konfirmasi Pembayaran
                 if (!isRelayOn) {
                     const userEncoded = encodeURIComponent(userLogin);
                     const amountEncoded = encodeURIComponent(totalTagihan);
                     paymentBtn.href = `scan.html?user=${userEncoded}&amount=${amountEncoded}`;
                     paymentBtn.style.display = 'inline-block';
                 } else {
-                    paymentBtn.style.display = 'none'; // Sembunyikan jika sudah nyala
+                    paymentBtn.style.display = 'none';
                 }
 
-
             } else {
-                // Tampilan jika data tidak ditemukan
                 relayStatusInfo.textContent = 'Status tidak diketahui';
                 monitoringBody.innerHTML = '<tr><td colspan="3">Data monitoring tidak ditemukan.</td></tr>';
                 billAmountEl.textContent = 'Data tidak ditemukan';
-                // console.log("DEBUG [user.html]: roomData tidak ditemukan."); // DEBUG
             }
         });
 
